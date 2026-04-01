@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+routeros-api
+sqlalchemy
+psycopg2-binary
