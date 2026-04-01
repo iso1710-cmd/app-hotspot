@@ -1,25 +1,31 @@
 from fastapi import FastAPI
-import routeros_api
+from pydantic import BaseModel
+from typing import List
 
 app = FastAPI()
 
+# Aquí guardaremos los tickets pendientes temporalmente
+tickets_pendientes = []
+
+class Ticket(BaseModel):
+    ficha: str
+    perfil: str
+
 @app.get("/")
 def home():
-    return {"mensaje": "Servidor de Tickets Activo"}
+    return {"mensaje": "Sistema de Cola de Tickets Activo"}
 
+# La App usará esto para ENVIAR el ticket a la cola
 @app.post("/crear-ticket")
-def crear_ticket(ip: str, puerto: int, user: str, password: str, ficha: str, perfil: str):
-    try:
-        connection = routeros_api.RouterOsApiPool(
-            ip, username=user, password=password, port=puerto, plaintext_login=True
-        )
-        api = connection.get_api()
-        hotspot = api.get_resource('/ip/hotspot/user')
-        
-        # Crea el usuario en el MikroTik
-        hotspot.add(name=ficha, password=ficha, profile=perfil)
-        
-        connection.disconnect()
-        return {"status": "OK", "ticket": ficha}
-    except Exception as e:
-        return {"status": "Error", "detalle": str(e)}
+def crear_ticket(ticket: Ticket):
+    # Aquí es donde estaba el error: cambiamos txt por ficha
+    tickets_pendientes.append({"name": ticket.ficha, "profile": ticket.perfil})
+    return {"status": "En espera", "msg": f"Ticket {ticket.ficha} guardado en la nube"}
+
+# El MikroTik usará esto para RECOGER los tickets
+@app.get("/get-tickets")
+def get_tickets():
+    global tickets_pendientes
+    copia_tickets = list(tickets_pendientes)
+    tickets_pendientes = [] # Limpiamos la cola después de entregarlos
+    return copia_tickets
